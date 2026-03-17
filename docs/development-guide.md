@@ -7,7 +7,7 @@ This doc explains how to build and run the OnlineBoutique source code locally us
 - [Docker for Desktop](https://www.docker.com/products/docker-desktop).
 - kubectl (can be installed via `gcloud components install kubectl`)
 - [skaffold **2.0+**](https://skaffold.dev/docs/install/) (latest version recommended), a tool that builds and deploys Docker images in bulk. 
-- A Google Cloud Project with Google Container Registry enabled. 
+- A Google Cloud Project with Artifact Registry enabled. 
 - Enable GCP APIs for Cloud Monitoring, Tracing, Profiler:
 ```
 gcloud services enable monitoring.googleapis.com \
@@ -23,53 +23,71 @@ gcloud services enable monitoring.googleapis.com \
 > a realistic cluster. **Note**: If your cluster has Workload Identity enabled, 
 > [see these instructions](https://cloud.google.com/kubernetes-engine/docs/how-to/workload-identity#enable)
 
-1.  Create a Google Kubernetes Engine cluster and make sure `kubectl` is pointing
-    to the cluster.
+1.  Create or select a Google Kubernetes Engine cluster and make sure `kubectl`
+    is pointing to it:
 
     ```sh
-    gcloud services enable container.googleapis.com
-    ```
+    export PROJECT_ID="your-project-id"
+    export REGION="asia-northeast1"
+    export CLUSTER_NAME="swagstore"
 
-    ```sh
-    gcloud container clusters create demo --enable-autoupgrade \
-        --enable-autoscaling --min-nodes=3 --max-nodes=10 --num-nodes=5 --zone=us-central1-a
-    ```
-
-    ```
+    gcloud services enable container.googleapis.com artifactregistry.googleapis.com
+    gcloud container clusters get-credentials "${CLUSTER_NAME}" --region "${REGION}" --project "${PROJECT_ID}"
     kubectl get nodes
     ```
 
-2.  Enable Google Container Registry (GCR) on your GCP project and configure the
-    `docker` CLI to authenticate to GCR:
+2.  Create a Docker repository in Artifact Registry and authenticate Docker:
 
     ```sh
-    gcloud services enable containerregistry.googleapis.com
+    export REPOSITORY="swagstore"
+
+    gcloud artifacts repositories create "${REPOSITORY}" \
+      --repository-format=docker \
+      --location="${REGION}" \
+      --description="Swagstore images" || true
+
+    gcloud auth configure-docker "${REGION}-docker.pkg.dev" -q
+    export DEFAULT_REPO="${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPOSITORY}"
     ```
+
+3.  Install Datadog with Helm before deploying the application. The checked-in
+    override file `datadog/values.gke.yaml` expects a secret named
+    `datadog-keys` in namespace `datadog` with `api-key` and `app-key` entries.
 
     ```sh
-    gcloud auth configure-docker -q
+    kubectl create namespace datadog --dry-run=client -o yaml | kubectl apply -f -
+    kubectl create secret generic datadog-keys \
+      --namespace datadog \
+      --from-literal api-key="${DATADOG_API_KEY}" \
+      --from-literal app-key="${DATADOG_APP_KEY}" \
+      --dry-run=client -o yaml | kubectl apply -f -
+
+    helm repo add datadog https://helm.datadoghq.com
+    helm repo update
+    helm upgrade --install datadog-agent datadog/datadog \
+      --namespace datadog \
+      --create-namespace \
+      -f datadog/values.gke.yaml
     ```
 
-3.  In the root of this repository, run `skaffold run --default-repo=gcr.io/[PROJECT_ID]`,
-    where [PROJECT_ID] is your GCP project ID.
+4.  Deploy the application with Skaffold. On Apple Silicon, keep
+    `--platform=linux/amd64` for GKE-compatible images.
+
+    ```sh
+    skaffold run --default-repo="${DEFAULT_REPO}" --platform=linux/amd64
+    ```
 
     This command:
 
     - builds the container images
-    - pushes them to GCR
-    - applies the `./kubernetes-manifests` deploying the application to
-      Kubernetes.
+    - pushes them to Artifact Registry
+    - applies the `./kubernetes-manifests` deployment to Kubernetes
 
-    **Troubleshooting:** If you get "No space left on device" error on Google
-    Cloud Shell, you can build the images on Google Cloud Build: [Enable the
-    Cloud Build
-    API](https://console.cloud.google.com/flows/enableapi?apiid=cloudbuild.googleapis.com),
-    then run `skaffold run -p gcb --default-repo=gcr.io/[PROJECT_ID]` instead.
+5.  Find the external IP for the frontend:
 
-4.  Find the IP address of your application, then visit the application on your
-    browser to confirm installation.
-
-        kubectl get service frontend-external
+    ```sh
+    kubectl get service frontend-external
+    ```
 
 
 ## Option 2 - Local Cluster 

@@ -21,9 +21,10 @@
 # - Cloud Build service account must have role: "Kubernetes Engine Developer"
 
 # USAGE:
-# GCP zone and GKE target cluster must be specified as substitutions
+# GKE cluster location, GKE target cluster, and Artifact Registry repository
+# must be specified as substitutions
 # Example invocation:
-# `gcloud builds submit --config=cloudbuild.yaml --substitutions=_ZONE=us-central1-b,_CLUSTER=demo-app-staging .`
+# `gcloud builds submit --config=cloudbuild.yaml --substitutions=_LOCATION=asia-northeast1,_CLUSTER=swagstore,_REPOSITORY=swagstore .`
 
 steps:
 - id: 'Deploy application to cluster'
@@ -32,8 +33,8 @@ steps:
   args:
   - '-c'
   - >
-    gcloud container clusters get-credentials --zone=$_ZONE $_CLUSTER;
-    skaffold run -f=skaffold.yaml --default-repo=gcr.io/$PROJECT_ID;
+    gcloud container clusters get-credentials $_CLUSTER --location=$_LOCATION;
+    skaffold run -f=skaffold.yaml --default-repo=${_LOCATION}-docker.pkg.dev/$PROJECT_ID/${_REPOSITORY};
 
 # Add more power, and more time, for heavy Skaffold build
 timeout: '3600s'

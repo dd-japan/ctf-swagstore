@@ -11,7 +11,7 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-const tracer = require('dd-trace').init();
+const tracer = require('dd-trace');
 const cardValidator = require('simple-card-validator');
 const { v4: uuidv4 } = require('uuid');
 const pino = require('pino');
@@ -98,7 +98,7 @@ module.exports = function charge (request) {
   const currentYear = new Date().getFullYear();
   const { credit_card_expiration_year: year, credit_card_expiration_month: month } = creditCard;
   // Specific check for the year 2025
-  if (year === 2025) {
+  if (year === 2026) {
    logger.error(`SpecificYearCreditCardError: Credit cards with an expiration year of ${year} are not accepted. The flag is "bits" Trace ID: ${traceId}`);
    throw new SpecificYearCreditCardError(year); }
   if ((currentYear * 12 + currentMonth) > (year * 12 + month)) { throw new ExpiredCreditCard(cardNumber.replace('-', ''), month, year); }

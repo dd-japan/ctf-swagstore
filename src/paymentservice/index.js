@@ -16,6 +16,8 @@
 
 'use strict';
 
+// Initialize dd-trace before loading grpc-related modules.
+require('dd-trace').init();
 
 if(process.env.DISABLE_PROFILER) {
   console.log("Profiler disabled.")

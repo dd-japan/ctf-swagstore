@@ -25,3 +25,7 @@ node_modules/
 /playwright-report/
 /blob-report/
 /playwright/.cache/
+tasks/lessons.md
+tasks/plan.md
+tasks/todo.md
+tasks/gke-rollout-notes.md

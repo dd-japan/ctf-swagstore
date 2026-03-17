@@ -1,0 +1,40 @@
+# Minimal Datadog override for GKE.
+# Create a Kubernetes secret named `datadog-keys` in the `datadog` namespace
+# with the keys `api-key` and `app-key` before installing this chart.
+
+datadog:
+  site: datadoghq.com
+  clusterName: jp-swagstore-gke
+  apiKeyExistingSecret: datadog-keys
+  appKeyExistingSecret: datadog-keys
+  kubeStateMetricsCore:
+    enabled: true
+  clusterChecks:
+    enabled: true
+  logs:
+    enabled: true
+    containerCollectAll: true
+    containerCollectUsingFiles: true
+  apm:
+    socketEnabled: true
+    portEnabled: false
+    instrumentation:
+      enabled: false
+  remoteConfiguration:
+    enabled: false
+
+clusterAgent:
+  enabled: true
+  admissionController:
+    enabled: true
+    mutateUnlabelled: false
+    failurePolicy: Ignore
+    remoteInstrumentation:
+      enabled: false
+
+clusterChecksRunner:
+  enabled: true
+
+providers:
+  gke:
+    autopilot: false
