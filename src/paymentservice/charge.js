@@ -60,6 +60,7 @@ class ExpiredCreditCard extends CreditCardError {
 class SpecificYearCreditCardError extends CreditCardError {
   constructor(year) {
     super(`Credit cards with an expiration year of ${year} are not accepted. The flag is "bits"`);
+    this.name = 'SpecificYearCreditCardError';
   }
 }
 
@@ -97,7 +98,7 @@ module.exports = function charge (request) {
   const currentMonth = new Date().getMonth() + 1;
   const currentYear = new Date().getFullYear();
   const { credit_card_expiration_year: year, credit_card_expiration_month: month } = creditCard;
-  // Specific check for the year 2025
+  // Specific check for the year 2026
   if (year === 2026) {
    logger.error(`SpecificYearCreditCardError: Credit cards with an expiration year of ${year} are not accepted. The flag is "bits" Trace ID: ${traceId}`);
    throw new SpecificYearCreditCardError(year); }

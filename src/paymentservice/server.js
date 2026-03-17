@@ -56,6 +56,10 @@ class HipsterShopServer {
       const response = charge(call.request);
       callback(null, response);
     } catch (err) {
+      const span = tracer.scope().active();
+      if (span) {
+        span.setTag('error', err);
+      }
       console.warn(err);
       callback(err);
     }
